@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "fatfs.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -77,7 +76,7 @@ static uint32_t SPIx_Read(void)
   uint32_t          readvalue = 0;
   uint32_t          writevalue = 0xFFFFFFFF;
 
-  status = HAL_SPI_TransmitReceive(&heval_Spi, (uint8_t*) &writevalue, (uint8_t*) &readvalue, 1, SpixTimeout);
+  status = HAL_SPI_TransmitReceive(heval_Spi, (uint8_t*) &writevalue, (uint8_t*) &readvalue, 1, SpixTimeout);
 
   /* Check the communication status */
   if(status != HAL_OK)
@@ -99,7 +98,7 @@ static void SPIx_WriteReadData(const uint8_t *DataIn, uint8_t *DataOut, uint16_t
 {
   HAL_StatusTypeDef status = HAL_OK;
 
-  status = HAL_SPI_TransmitReceive(&heval_Spi, (uint8_t*) DataIn, DataOut, DataLength, SpixTimeout);
+  status = HAL_SPI_TransmitReceive(heval_Spi, (uint8_t*) DataIn, DataOut, DataLength, SpixTimeout);
 
   /* Check the communication status */
   if(status != HAL_OK)
@@ -118,7 +117,7 @@ static void SPIx_WriteData(const uint8_t *Data, uint16_t DataLength)
 {
   HAL_StatusTypeDef status = HAL_OK;
 
-  status = HAL_SPI_Transmit(&heval_Spi, (uint8_t*) Data, DataLength, SpixTimeout);
+  status = HAL_SPI_Transmit(heval_Spi, (uint8_t*) Data, DataLength, SpixTimeout);
 
   /* Check the communication status */
   if(status != HAL_OK)
@@ -137,7 +136,7 @@ static void SPIx_ReadData(const uint8_t *Data, uint16_t DataLength)
 {
   HAL_StatusTypeDef status = HAL_OK;
 
-  status = HAL_SPI_Receive(&heval_Spi, (uint8_t*) Data, DataLength, SpixTimeout);
+  status = HAL_SPI_Receive(heval_Spi, (uint8_t*) Data, DataLength, SpixTimeout);
 
   /* Check the communication status */
   if(status != HAL_OK)
@@ -156,7 +155,7 @@ static void SPIx_Write(uint8_t Value)
   HAL_StatusTypeDef status = HAL_OK;
   uint8_t data;
 
-  status = HAL_SPI_TransmitReceive(&heval_Spi, (uint8_t*) &Value, &data, 1, SpixTimeout);
+  status = HAL_SPI_TransmitReceive(heval_Spi, (uint8_t*) &Value, &data, 1, SpixTimeout);
 
   /* Check the communication status */
   if(status != HAL_OK)
@@ -173,7 +172,7 @@ static void SPIx_Write(uint8_t Value)
 void SPIx_Error (void)
 {
   /* De-initialize the SPI communication BUS */
-  HAL_SPI_DeInit(&heval_Spi);
+  HAL_SPI_DeInit(heval_Spi);
 
   /* Re-Initiaize the SPI communication BUS */
   MX_SPI1_Init();
@@ -281,7 +280,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
 	  FRESULT res;                                          /* FatFs function common result code */
 	  uint32_t byteswritten, bytesread;                     /* File write/read counts */
-	  uint8_t wtext[] = "This is STM32 working with FatFs"; /* File write buffer */
+	  uint8_t wtext[] = "This is STM32 working with FatFs, make Holovko Oleksander"; /* File write buffer */
 	  uint8_t rtext[100];
   /* USER CODE END 1 */
 
@@ -305,8 +304,11 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
-  MX_FATFS_Init();
+  //MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+  HAL_Delay(500);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
   /*##-1- Link the micro SD disk I/O driver ##################################*/
     if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
     {
@@ -314,7 +316,7 @@ int main(void)
       if(f_mount(&SDFatFs, (TCHAR const*)SDPath, 0) != FR_OK)
       {
         /* FatFs Initialization Error */
-        Error_Handler();
+          Error_Handler();
       }
       else
       {
@@ -390,6 +392,10 @@ int main(void)
         }
       }
     }
+    else
+    {
+        //HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+    }
 
     /*##-11- Unlink the RAM disk I/O driver ####################################*/
     FATFS_UnLinkDriver(SDPath);
@@ -418,10 +424,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -431,12 +440,12 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -465,7 +474,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -525,12 +534,23 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : LED_Pin */
+  GPIO_InitStruct.Pin = LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SPI_CS_Pin */
   GPIO_InitStruct.Pin = SPI_CS_Pin;
@@ -565,9 +585,11 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
+  //__disable_irq();
   while (1)
   {
+      HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+      HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }
